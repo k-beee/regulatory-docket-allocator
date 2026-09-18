@@ -6,8 +6,6 @@ import { Scale, Wallet, ChevronDown, ExternalLink } from 'lucide-react';
 
 interface MastheadProps {
   contractAddress: string;
-  isSimulation: boolean;
-  onToggleSimulation: (sim: boolean) => void;
   connectedAccount: string | null;
   onConnectAccount: (account: string, provider: any) => void;
   onDisconnectAccount: () => void;
@@ -15,8 +13,6 @@ interface MastheadProps {
 
 export const Masthead: React.FC<MastheadProps> = ({
   contractAddress,
-  isSimulation,
-  onToggleSimulation,
   connectedAccount,
   onConnectAccount,
   onDisconnectAccount,
@@ -88,44 +84,19 @@ export const Masthead: React.FC<MastheadProps> = ({
             <span style={{ color: '#fff', fontWeight: 600 }}>{NETWORK_CONFIG.chainName}</span>
           </div>
 
+          {/* Live Network & Consensus Engine Status */}
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            background: 'var(--color-bg-base)',
-            border: '1px solid var(--color-border-subtle)',
+            gap: '0.5rem',
+            background: 'rgba(14, 165, 233, 0.12)',
+            border: '1px solid rgba(14, 165, 233, 0.3)',
+            padding: '0.35rem 0.85rem',
             borderRadius: 'var(--radius-sm)',
-            padding: '2px',
+            fontSize: '0.8rem',
           }}>
-            <button
-              onClick={() => onToggleSimulation(true)}
-              style={{
-                border: 'none',
-                background: isSimulation ? 'var(--color-accent-cyan)' : 'transparent',
-                color: isSimulation ? '#fff' : 'var(--color-text-secondary)',
-                fontWeight: isSimulation ? 600 : 400,
-                fontSize: '0.75rem',
-                padding: '0.35rem 0.75rem',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
-            >
-              Interactive Sim
-            </button>
-            <button
-              onClick={() => onToggleSimulation(false)}
-              style={{
-                border: 'none',
-                background: !isSimulation ? 'var(--color-bg-elevated)' : 'transparent',
-                color: !isSimulation ? '#fff' : 'var(--color-text-secondary)',
-                fontWeight: !isSimulation ? 600 : 400,
-                fontSize: '0.75rem',
-                padding: '0.35rem 0.75rem',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
-            >
-              Live Studionet
-            </button>
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#0ea5e9', boxShadow: '0 0 8px #0ea5e9' }}></span>
+            <span style={{ color: '#38bdf8', fontWeight: 600 }}>Live Studionet (GenVM)</span>
           </div>
 
           <div style={{ position: 'relative' }}>
@@ -230,7 +201,7 @@ export const Masthead: React.FC<MastheadProps> = ({
                       ))
                     ) : (
                       <div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', padding: '0.5rem 0' }}>
-                        No EIP-6963 wallets detected. Defaulting to Simulated Execution.
+                        No EIP-6963 wallets detected. Please connect MetaMask or Studionet wallet.
                       </div>
                     )}
                   </div>

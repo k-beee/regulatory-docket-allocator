@@ -13,7 +13,7 @@ interface DocketHeroProps {
   onAnnulDocket: () => void;
   onOpenContestationDrawer: () => void;
   onOpenAuditBundle: () => void;
-  isSimulated: boolean;
+  onInitializeDocket?: () => void;
 }
 
 export const DocketHero: React.FC<DocketHeroProps> = ({
@@ -27,12 +27,37 @@ export const DocketHero: React.FC<DocketHeroProps> = ({
   onAnnulDocket,
   onOpenContestationDrawer,
   onOpenAuditBundle,
-  isSimulated
+  onInitializeDocket
 }) => {
   if (!docket) {
     return (
       <div className="reg-card" style={{ padding: '2.5rem', textAlign: 'center', marginBottom: '1.5rem' }}>
-        <p style={{ color: 'var(--color-text-secondary)' }}>Loading regulatory docket details...</p>
+        <h3 style={{ fontSize: '1.25rem', color: '#fff', marginBottom: '0.5rem' }}>No Active Docket Found on Studionet</h3>
+        <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1.25rem', fontSize: '0.875rem' }}>
+          The deployed contract has no initialized docket record yet. Connect wallet to initialize Docket #1 or run the live population script.
+        </p>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem' }}>
+          <button
+            className="reg-btn reg-btn-outline"
+            onClick={onRefresh}
+            disabled={isLoading}
+            style={{ padding: '0.5rem 1rem' }}
+          >
+            <RefreshCw size={14} className={isLoading ? 'spin-icon' : ''} />
+            <span>Refresh State</span>
+          </button>
+          {onInitializeDocket && (
+            <button
+              className="reg-btn reg-btn-primary"
+              onClick={onInitializeDocket}
+              disabled={isLoading}
+              style={{ padding: '0.5rem 1.25rem' }}
+            >
+              <Sparkles size={15} />
+              <span>Initialize Rulemaking Docket #1</span>
+            </button>
+          )}
+        </div>
       </div>
     );
   }
@@ -69,19 +94,17 @@ export const DocketHero: React.FC<DocketHeroProps> = ({
           <span style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', fontFamily: 'var(--font-mono)' }}>
             REV-{revision}
           </span>
-          {isSimulated && (
-            <span style={{
-              fontSize: '0.7rem',
-              background: 'rgba(234, 179, 8, 0.15)',
-              color: 'var(--color-accent-gold)',
-              padding: '0.15rem 0.5rem',
-              borderRadius: '4px',
-              border: '1px solid rgba(234, 179, 8, 0.3)',
-              fontFamily: 'var(--font-mono)'
-            }}>
-              SIMULATION HARNESS ACTIVE
-            </span>
-          )}
+          <span style={{
+            fontSize: '0.7rem',
+            background: 'rgba(14, 165, 233, 0.15)',
+            color: 'var(--color-accent-cyan)',
+            padding: '0.15rem 0.5rem',
+            borderRadius: '4px',
+            border: '1px solid rgba(14, 165, 233, 0.3)',
+            fontFamily: 'var(--font-mono)'
+          }}>
+            GENVM STUDIONET LIVE
+          </span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
