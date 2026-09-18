@@ -353,3 +353,80 @@ class RegulatoryDocketAllocator(gl.Contract):
 
         self._persist_docket(d_id, docket_state)
         return u256(d_id)
+
+    @gl.public.write
+    def enroll_submission(
+        self,
+        docket_id: u256,
+        submission_id: str,
+        url: str,
+        digest: str,
+    ) -> u256:
+        """Enroll an official public comment or scientific study into the regulatory docket."""
+        docket = self._retrieve_docket(int(docket_id))
+        caller = _resolve_transaction_caller()
+
+        if caller != docket["admission_authority"]:
+            raise gl.vm.UserError(
+                f"ERR_UNAUTHORIZED_REGISTRAR: Caller {caller} is not docket admission authority ({docket['admission_authority']})"
+            )
+        if docket["state"] != STATE_ENROLLING:
+            raise gl.vm.UserError(
+                f"ERR_INVALID_LIFECYCLE_STATE: Docket is in state {docket['state']}, expected ENROLLING"
+            )
+
+        now = _current_timestamp_utc()
+        if now >= docket["enrollment_deadline"]:
+            raise gl.vm.UserError(
+                f"ERR_ENROLLMENT_EXPIRED: Enrollment deadline {docket['enrollment_deadline']} has lapsed (now {now})"
+            )
+
+        clean_id = submission_id.strip()
+        clean_url = url.strip()
+        clean_digest = digest.strip().lower()
+
+        if not clean_id:
+            raise gl.vm.UserError("ERR_INVALID_SUBMISSION_ID: Submission identifier cannot be empty")
+        if _has_forbidden_delimiters(clean_id):
+            raise gl.vm.UserError(f"ERR_FORBIDDEN_CHARACTERS: Submission ID '{clean_id}' contains delimiters or control characters")
+        if not _validate_http_url(clean_url):
+            raise gl.vm.UserError(f"ERR_INVALID_SUBMISSION_URL: URL '{clean_url}' is not a valid public HTTP/HTTPS URL")
+        if not _validate_sha256_digest(clean_digest):
+            raise gl.vm.UserError(f"ERR_INVALID_DIGEST: Digest '{clean_digest}' is not a 64-char hexadecimal SHA-256")
+
+        # Deduplication checks
+        for existing in docket["submissions"]:
+            if existing["submission_id"] == clean_id:
+                raise gl.vm.UserError(f"ERR_DUPLICATE_ID: Submission ID '{clean_id}' is already enrolled in this docket")
+            if existing["url"] == clean_url:
+                raise gl.vm.UserError(f"ERR_DUPLICATE_URL: Submission URL '{clean_url}' is already enrolled in this docket")
+            if existing["digest"] == clean_digest:
+                raise gl.vm.UserError(f"ERR_DUPLICATE_DIGEST: Content digest '{clean_digest}' is already enrolled in this docket")
+
+        idx = len(docket["submissions"])
+        receipt = _compute_apa_compliance_receipt(int(docket_id), clean_id, clean_url, clean_digest, caller)
+
+        record = {
+            "index": idx,
+            "submission_id": clean_id,
+            "url": clean_url,
+            "digest": clean_digest,
+            "registrar": caller,
+            "admission_authority": docket["admission_authority"],
+            "enrollment_receipt": receipt,
+            "eligible": True,
+            "exclusion_reason": "",
+            "cluster_id": 0,
+            "cluster_label": "",
+            "relevance_score": 0,
+            "is_duplicate": False,
+            "duplicate_of_id": "",
+            "selected": False,
+            "selection_rank": 0,
+            "reason_code": "",
+            "rationale": "",
+        }
+
+        docket["submissions"].append(record)
+        self._persist_docket(int(docket_id), docket)
+        return u256(idx)
