@@ -2,10 +2,14 @@
 ### Verifiable Administrative Procedure Act (APA § 553) Rulemaking on GenLayer
 
 [![GenLayer Studionet](https://img.shields.io/badge/GenLayer-Studionet%20(61999)-0ea5e9?style=flat-square)](https://studio.genlayer.com)
+[![Deployed Contract](https://img.shields.io/badge/Studionet%20Contract-0xC2E3b4...41962-14b8a6?style=flat-square)](https://explorer-studio.genlayer.com/address/0xC2E3b411A4b5BD691A42285A47111BD91d541962)
 [![GenVM Consensus](https://img.shields.io/badge/GenVM-Dragon%20Consensus-14b8a6?style=flat-square)](https://docs.genlayer.com)
 [![APA 5 U.S.C. § 553](https://img.shields.io/badge/Compliance-5%20U.S.C.%20§%20553%20%2F%20§%20706-eab308?style=flat-square)](https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title5-section553&num=0&edition=prelim)
 [![Test Suite](https://img.shields.io/badge/Tests-18%2F18%20Passing%20(100%25)-22c55e?style=flat-square)]()
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=flat-square)](LICENSE)
+
+> **Live Studionet Deployment:** [`0xC2E3b411A4b5BD691A42285A47111BD91d541962`](https://explorer-studio.genlayer.com/address/0xC2E3b411A4b5BD691A42285A47111BD91d541962)  
+> **An Intelligent Contract on GenLayer orchestrating verifiable Administrative Procedure Act (APA § 553) notice-and-comment rulemaking, non-deterministic impact clustering, and balanced oral hearing sortition.**
 
 ---
 
@@ -255,6 +259,7 @@ Open `http://localhost:5173` in your browser:
 | :--- | :--- |
 | **Contract Source** | `contracts/regulatory_docket_allocator.py` |
 | **Contract SHA-256** | `02ae9d41a156c05271588c561840bcbfc341b64f5f0f1964a0541a75f379651c` |
+| **Deployed Address** | [`0xC2E3b411A4b5BD691A42285A47111BD91d541962`](https://explorer-studio.genlayer.com/address/0xC2E3b411A4b5BD691A42285A47111BD91d541962) |
 | **Network** | GenLayer Studionet (Chain ID 61999) |
 | **Standard** | Administrative Procedure Act 5 U.S.C. §§ 553, 706 |
 | **Author** | k bee (`k-beee`) |
