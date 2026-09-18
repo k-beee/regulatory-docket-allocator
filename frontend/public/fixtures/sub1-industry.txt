@@ -1,0 +1,6 @@
+SUBMISSION ID: EPA-SUB-001
+AUTHORITY: Commercial Engine Manufacturers Association (EMA)
+DOCKET: EPA-HQ-OAR-2026-0188
+SUBJECT: Capital Expenditure Cycle & Fleet Turnaround Timelines for Class 8 Heavy Vehicles
+
+The Commercial Engine Manufacturers Association submits economic and engineering data demonstrating that meeting the proposed 0.005 g/bhp-hr PM2.5 ceiling by MY 2028 requires a 48-month lead time for durable catalyst validation. Fleet operators report average capital depreciation cycles of 7.2 years, necessitating a phased compliance ramp to avoid regional supply-chain dislocation.
