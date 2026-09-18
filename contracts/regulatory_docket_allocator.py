@@ -430,3 +430,53 @@ class RegulatoryDocketAllocator(gl.Contract):
         docket["submissions"].append(record)
         self._persist_docket(int(docket_id), docket)
         return u256(idx)
+
+    @gl.public.write
+    def commit_and_lock_manifest(self, docket_id: u256) -> str:
+        """Freeze enrolled submission batch and verify canonical manifest digest against precommitted target."""
+        docket = self._retrieve_docket(int(docket_id))
+        caller = _resolve_transaction_caller()
+        if caller != docket["organizer"]:
+            raise gl.vm.UserError(f"ERR_UNAUTHORIZED: Caller {caller} is not docket organizer ({docket['organizer']})")
+        if docket["state"] != STATE_ENROLLING:
+            raise gl.vm.UserError(f"ERR_INVALID_LIFECYCLE_STATE: Docket is in state {docket['state']}, expected ENROLLING")
+        if len(docket["submissions"]) == 0:
+            raise gl.vm.UserError("ERR_EMPTY_DOCKET: Cannot lock an empty submission manifest")
+
+        # Re-verify all enrollment receipts at lock boundary
+        for s in docket["submissions"]:
+            if s.get("registrar") != docket["admission_authority"]:
+                raise gl.vm.UserError("ERR_UNAUTHORIZED_REGISTRAR: Enrolled submission registrar does not match admission authority")
+            expected_receipt = _compute_apa_compliance_receipt(
+                int(docket_id), s["submission_id"], s["url"], s["digest"], s["registrar"]
+            )
+            if s.get("enrollment_receipt") != expected_receipt:
+                raise gl.vm.UserError("ERR_RECEIPT_TAMPERED: APA compliance receipt does not match submission record")
+
+        computed_hash = _compute_manifest_hash(docket["submissions"])
+        if computed_hash != docket["expected_manifest_digest"]:
+            raise gl.vm.UserError(
+                f"ERR_MANIFEST_HASH_MISMATCH: Computed manifest hash ({computed_hash}) does not match expected target ({docket['expected_manifest_digest']})"
+            )
+
+        docket["computed_manifest_digest"] = computed_hash
+        docket["state"] = STATE_MANIFEST_LOCKED
+        self._persist_docket(int(docket_id), docket)
+        return computed_hash
+
+    @gl.public.write
+    def annul_docket(self, docket_id: u256) -> str:
+        """Agency recovery path to abort an enrollment batch before cryptographic freeze."""
+        docket = self._retrieve_docket(int(docket_id))
+        caller = _resolve_transaction_caller()
+        if caller != docket["organizer"]:
+            raise gl.vm.UserError(f"ERR_UNAUTHORIZED: Caller {caller} is not docket organizer ({docket['organizer']})")
+        if docket["state"] != STATE_ENROLLING:
+            raise gl.vm.UserError(
+                f"ERR_IMMUTABLE_AFTER_LOCK: Cannot annul docket in state {docket['state']}; only ENROLLING dockets may be annulled"
+            )
+
+        docket["state"] = STATE_ANNULLED_PRELOCK
+        docket["annulment_reason"] = f"Administrative annulment executed by {caller} prior to manifest lock"
+        self._persist_docket(int(docket_id), docket)
+        return STATE_ANNULLED_PRELOCK
