@@ -10,11 +10,9 @@
  *   GENLAYER_PRIVATE_KEY=<PRIVATE_KEY> node scripts/populate_live.mjs
  */
 
-import { createClient, createAccount } from 'genlayer-js';
+import { createClient, createAccount, generatePrivateKey, chains } from 'genlayer-js';
 
 const CONTRACT_ADDRESS = '0xC2E3b411A4b5BD691A42285A47111BD91d541962';
-const STUDIONET_RPC = 'https://studio.genlayer.com/api';
-
 const privateKey = process.argv[2] || process.env.GENLAYER_PRIVATE_KEY;
 
 if (!privateKey) {
@@ -23,129 +21,127 @@ if (!privateKey) {
   process.exit(1);
 }
 
-const studionet = {
-  id: 61999,
-  name: 'GenLayer Studionet',
-  rpcUrls: {
-    default: { http: [STUDIONET_RPC] },
-    public: { http: [STUDIONET_RPC] }
-  }
-};
-
 async function main() {
-  console.log('--- Initializing GenLayer Client ---');
-  const formattedKey = privateKey.startsWith('0x') ? privateKey : `0x${privateKey}`;
-  const account = createAccount(formattedKey);
-  console.log(`Using Account: ${account.address}`);
-  console.log(`Target Contract: ${CONTRACT_ADDRESS}`);
+  console.log('====================================================');
+  console.log('   REGULATORY DOCKET ALLOCATOR - LIVE POPULATION    ');
+  console.log('====================================================\n');
 
-  const client = createClient({
-    chain: studionet,
-    account
+  const formattedKey = privateKey.startsWith('0x') ? privateKey : `0x${privateKey}`;
+  const masterAccount = createAccount(formattedKey);
+  console.log(`[Master Account] ${masterAccount.address}`);
+  console.log(`[Target Contract] ${CONTRACT_ADDRESS}`);
+
+  const masterClient = createClient({
+    chain: chains.studionet,
+    account: masterAccount,
   });
 
-  // Check current docket count
+  const bal = await masterClient.getBalance({ address: masterAccount.address });
+  console.log(`[Balance] ${(Number(bal) / 1e18).toFixed(4)} GEN\n`);
+
+  // Check if docket 1 exists
+  let docketExists = false;
   try {
-    const docketCount = await client.readContract({
-      address: CONTRACT_ADDRESS,
-      functionName: 'get_docket_count',
-      args: []
-    });
-    console.log(`Current On-Chain Docket Count: ${docketCount}`);
-
-    let targetDocketId = Number(docketCount);
-
-    if (targetDocketId === 0) {
-      console.log('\n[1/4] Initializing Docket #1 (EPA Heavy Vehicle PM2.5 Rulemaking)...');
-      const now = Math.floor(Date.now() / 1000);
-      const initTx = await client.writeContract({
-        address: CONTRACT_ADDRESS,
-        functionName: 'initialize_docket',
-        args: [
-          account.address,
-          account.address,
-          'https://federalregister.gov/dockets/EPA-HQ-OAR-2026-0188',
-          '4a6b2c89f1092e038827419efcd51804c81e9b28a7e02518e3290bca7140f9aa',
-          3, // 3 oral witness slots
-          now + 86400, // 24h enrollment deadline
-          now + 172800 // 48h contestation deadline
-        ]
-      });
-      console.log(`Init Tx Submitted: ${initTx}`);
-      console.log('Waiting for receipt...');
-      const initReceipt = await client.waitForTransactionReceipt({ hash: initTx });
-      console.log(`Docket #1 Initialized! Status: ${initReceipt.status}`);
-      targetDocketId = 1;
-    } else {
-      console.log(`Docket #1 already exists (Current state will be populated/inspected).`);
-    }
-
-    // Check existing submissions
-    const existingSubs = await client.readContract({
-      address: CONTRACT_ADDRESS,
-      functionName: 'get_all_submissions',
-      args: [targetDocketId]
-    });
-    console.log(`Existing Submissions Count: ${existingSubs ? existingSubs.length : 0}`);
-
-    if (!existingSubs || existingSubs.length === 0) {
-      console.log('\n[2/4] Enrolling authentic public submissions...');
-      const authenticSubmissions = [
-        {
-          id: 'EPA-SUB-001',
-          url: 'https://federalregister.gov/comments/EPA-HQ-OAR-2026-0188/001-fleet-economics.txt',
-          digest: '1111111111111111111111111111111111111111111111111111111111111111'
-        },
-        {
-          id: 'EPA-SUB-002',
-          url: 'https://federalregister.gov/comments/EPA-HQ-OAR-2026-0188/002-pediatric-epidemiology.txt',
-          digest: '2222222222222222222222222222222222222222222222222222222222222222'
-        },
-        {
-          id: 'EPA-SUB-003',
-          url: 'https://federalregister.gov/comments/EPA-HQ-OAR-2026-0188/003-small-biz-freight.txt',
-          digest: '3333333333333333333333333333333333333333333333333333333333333333'
-        },
-        {
-          id: 'EPA-SUB-004',
-          url: 'https://federalregister.gov/comments/EPA-HQ-OAR-2026-0188/004-clean-hydrogen-powertrain.txt',
-          digest: '4444444444444444444444444444444444444444444444444444444444444444'
-        },
-        {
-          id: 'EPA-SUB-005',
-          url: 'https://federalregister.gov/comments/EPA-HQ-OAR-2026-0188/005-tampered-sample.txt',
-          digest: '5555555555555555555555555555555555555555555555555555555555555555'
-        }
-      ];
-
-      for (const sub of authenticSubmissions) {
-        console.log(`Enrolling ${sub.id}...`);
-        const tx = await client.writeContract({
-          address: CONTRACT_ADDRESS,
-          functionName: 'enroll_submission',
-          args: [targetDocketId, sub.id, sub.url, sub.digest]
-        });
-        console.log(`  Tx: ${tx}`);
-        await client.waitForTransactionReceipt({ hash: tx });
-      }
-      console.log('All 5 public submissions successfully enrolled on-chain!');
-    }
-
-    console.log('\n[3/4] Manifest Verification & Status Summary:');
-    const docketSummary = await client.readContract({
+    const d = await masterClient.readContract({
       address: CONTRACT_ADDRESS,
       functionName: 'get_docket',
-      args: [targetDocketId]
+      args: [1],
     });
-    console.log('Docket State:', docketSummary.state);
-    console.log('Enrolled Submissions:', docketSummary.submission_count);
-    console.log('Manifest Hash:', docketSummary.expected_manifest_digest || docketSummary.computed_manifest_digest);
-
-    console.log('\n[SUCCESS] Live transactions populated successfully on GenLayer Studionet!');
-    console.log(`View live contract on explorer: https://explorer-studio.genlayer.com/address/${CONTRACT_ADDRESS}`);
-  } catch (err) {
-    console.error('Execution failed with error:', err);
+    if (d) {
+      docketExists = true;
+      console.log('Docket #1 already exists on-chain:');
+      console.log(`  State: ${JSON.parse(d).state}`);
+      console.log(`  Submissions: ${JSON.parse(d).submission_count}`);
+    }
+  } catch {
+    docketExists = false;
   }
+
+  if (!docketExists) {
+    console.log('\n[1/3] Initializing Rulemaking Docket #1...');
+    const now = Math.floor(Date.now() / 1000);
+    const initTx = await masterClient.writeContract({
+      address: CONTRACT_ADDRESS,
+      functionName: 'initialize_docket',
+      args: [
+        'https://federalregister.gov/dockets/EPA-HQ-OAR-2026-0188',
+        '4a6b2c89f1092e038827419efcd51804c81e9b28a7e02518e3290bca7140f9aa',
+        '3bf1e0dc12003c267232230a103cfd39c09c323f99066601ea319a2786a51d8b',
+        3, // 3 oral witness slots
+        now + 86400,
+        now + 172800,
+      ],
+      value: 0n,
+    });
+    console.log(`Init Tx: ${initTx}`);
+    const receipt = await masterClient.waitForTransactionReceipt({ hash: initTx });
+    console.log(`Docket #1 Initialized! Status: ${receipt.result_name}`);
+  }
+
+  // Check enrolled submissions
+  const subs = await masterClient.readContract({
+    address: CONTRACT_ADDRESS,
+    functionName: 'get_all_submissions',
+    args: [1],
+  });
+  const currentSubs = subs ? JSON.parse(subs) : [];
+  console.log(`\nCurrent Enrolled Submissions: ${currentSubs.length}`);
+
+  if (currentSubs.length < 5) {
+    console.log('\n[2/3] Enrolling missing public submissions...');
+    const candidates = [
+      {
+        id: 'EPA-SUB-001',
+        url: 'https://federalregister.gov/comments/EPA-HQ-OAR-2026-0188/001-fleet-economics.txt',
+        digest: '1111111111111111111111111111111111111111111111111111111111111111',
+      },
+      {
+        id: 'EPA-SUB-002',
+        url: 'https://federalregister.gov/comments/EPA-HQ-OAR-2026-0188/002-pediatric-epidemiology.txt',
+        digest: '2222222222222222222222222222222222222222222222222222222222222222',
+      },
+      {
+        id: 'EPA-SUB-003',
+        url: 'https://federalregister.gov/comments/EPA-HQ-OAR-2026-0188/003-small-biz-freight.txt',
+        digest: '3333333333333333333333333333333333333333333333333333333333333333',
+      },
+      {
+        id: 'EPA-SUB-004',
+        url: 'https://federalregister.gov/comments/EPA-HQ-OAR-2026-0188/004-clean-hydrogen-powertrain.txt',
+        digest: '4444444444444444444444444444444444444444444444444444444444444444',
+      },
+      {
+        id: 'EPA-SUB-005',
+        url: 'https://federalregister.gov/comments/EPA-HQ-OAR-2026-0188/005-tampered-sample.txt',
+        digest: '5555555555555555555555555555555555555555555555555555555555555555',
+      },
+    ];
+
+    const existingIds = new Set(currentSubs.map((s) => s.submission_id));
+
+    for (const c of candidates) {
+      if (!existingIds.has(c.id)) {
+        console.log(`Enrolling ${c.id}...`);
+        const tx = await masterClient.writeContract({
+          address: CONTRACT_ADDRESS,
+          functionName: 'enroll_submission',
+          args: [1, c.id, c.url, c.digest],
+          value: 0n,
+        });
+        console.log(`  Tx: ${tx}`);
+        await masterClient.waitForTransactionReceipt({ hash: tx });
+      }
+    }
+  }
+
+  console.log('\n[3/3] Verification:');
+  const summary = await masterClient.readContract({
+    address: CONTRACT_ADDRESS,
+    functionName: 'get_docket',
+    args: [1],
+  });
+  console.log('Live Docket Record:', JSON.parse(summary));
+  console.log(`\nView on GenLayer Explorer: https://explorer-studio.genlayer.com/address/${CONTRACT_ADDRESS}`);
 }
 
-main();
+main().catch(console.error);

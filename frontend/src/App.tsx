@@ -58,15 +58,14 @@ export const App: React.FC = () => {
     if (!client) return;
     try {
       setIsLoading(true);
-      const count = await client.getDocketCount();
-      if (count === 0) {
+      const summary = await client.getDocketSummary(1);
+      if (!summary) {
         setDocket(null);
         setClusters([]);
         setSubmissions([]);
         setContestations([]);
         return;
       }
-      const summary = await client.getDocketSummary(1);
       setDocket(summary);
       const cls = await client.getRegulatoryClusters(1);
       setClusters(cls);
@@ -96,11 +95,10 @@ export const App: React.FC = () => {
     try {
       setIsLoading(true);
       addLog('initialize_docket', 'PENDING', undefined, 'Submitting initialize_docket transaction to Studionet...');
-      const tx = await client.initializeDocket(
-        connectedAccount,
-        connectedAccount,
+      const tx = await client!.initializeDocket(
         'https://federalregister.gov/dockets/EPA-HQ-OAR-2026-0188',
         '4a6b2c89f1092e038827419efcd51804c81e9b28a7e02518e3290bca7140f9aa',
+        '3bf1e0dc12003c267232230a103cfd39c09c323f99066601ea319a2786a51d8b',
         3,
         Math.floor(Date.now() / 1000) + 86400,
         Math.floor(Date.now() / 1000) + 172800
