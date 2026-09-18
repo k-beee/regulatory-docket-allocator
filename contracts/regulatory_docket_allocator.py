@@ -1089,3 +1089,134 @@ class RegulatoryDocketAllocator(gl.Contract):
             "reason": contestation["resolution_reason"],
             "revision": docket["revision"],
         })
+
+    @gl.public.write
+    def ratify_docket(self, docket_id: u256) -> str:
+        """Permanently ratify the administrative rulemaking docket roll upon contestation window expiry."""
+        docket = self._retrieve_docket(int(docket_id))
+        caller = _resolve_transaction_caller()
+
+        if caller != docket["organizer"]:
+            raise gl.vm.UserError(f"ERR_UNAUTHORIZED: Caller {caller} is not docket organizer ({docket['organizer']})")
+        if docket["state"] not in (STATE_WITNESSES_ALLOCATED, STATE_CONTESTATION_OPEN):
+            raise gl.vm.UserError(
+                f"ERR_INVALID_LIFECYCLE_STATE: Cannot ratify docket in state {docket['state']}; sortition must precede ratification"
+            )
+
+        now = _current_timestamp_utc()
+        if now < docket["contestation_deadline"]:
+            raise gl.vm.UserError(
+                f"ERR_CONTESTATION_WINDOW_ACTIVE: Contestation deadline {docket['contestation_deadline']} not yet reached (now {now})"
+            )
+
+        pending_disputes = [c["id"] for c in docket["contestations"] if c["status"] == STATUS_PENDING]
+        if pending_disputes:
+            raise gl.vm.UserError(
+                f"ERR_UNRESOLVED_CONTESTATIONS: Cannot ratify while challenges {pending_disputes} remain pending arbitration"
+            )
+
+        docket["state"] = STATE_SOVEREIGN_RATIFIED
+        self._persist_docket(int(docket_id), docket)
+        return STATE_SOVEREIGN_RATIFIED
+
+    # ==========================================================================
+    # 5. Public View Inspection Methods
+    # ==========================================================================
+
+    @gl.public.view
+    def get_docket(self, docket_id: u256) -> str:
+        """Retrieve complete administrative docket metadata and summary state."""
+        docket = self._retrieve_docket(int(docket_id))
+        pending_tally = sum(1 for c in docket["contestations"] if c["status"] == STATUS_PENDING)
+
+        return _encode_json_compact({
+            "docket_id": docket["id"],
+            "organizer": docket["organizer"],
+            "admission_authority": docket["admission_authority"],
+            "proposal_url": docket["proposal_url"],
+            "proposal_digest": docket["proposal_digest"],
+            "expected_manifest_digest": docket["expected_manifest_digest"],
+            "computed_manifest_digest": docket["computed_manifest_digest"],
+            "slot_count": docket["slot_count"],
+            "enrollment_deadline": docket["enrollment_deadline"],
+            "contestation_deadline": docket["contestation_deadline"],
+            "state": docket["state"],
+            "submission_count": len(docket["submissions"]),
+            "revision": docket["revision"],
+            "accepted_contestation_count": docket["accepted_contestation_count"],
+            "pending_contestation_count": pending_tally,
+            "total_contestation_count": len(docket["contestations"]),
+            "annulment_reason": docket.get("annulment_reason", ""),
+        })
+
+    @gl.public.view
+    def get_submission_count(self, docket_id: u256) -> u256:
+        """Get the count of enrolled submissions for a docket."""
+        docket = self._retrieve_docket(int(docket_id))
+        return u256(len(docket["submissions"]))
+
+    @gl.public.view
+    def get_submission_by_index(self, docket_id: u256, index: u256) -> str:
+        """Retrieve an enrolled submission record by registration index."""
+        docket = self._retrieve_docket(int(docket_id))
+        idx = int(index)
+        if idx < 0 or idx >= len(docket["submissions"]):
+            raise gl.vm.UserError(f"ERR_INDEX_OUT_OF_BOUNDS: Index {idx} exceeds bounds [0, {len(docket['submissions']) - 1}]")
+        return _encode_json_compact(docket["submissions"][idx])
+
+    @gl.public.view
+    def get_submission_by_id(self, docket_id: u256, submission_id: str) -> str:
+        """Retrieve an enrolled submission record by its unique ID."""
+        docket = self._retrieve_docket(int(docket_id))
+        clean_id = submission_id.strip()
+        for s in docket["submissions"]:
+            if s["submission_id"] == clean_id:
+                return _encode_json_compact(s)
+        raise gl.vm.UserError(f"ERR_SUBMISSION_NOT_FOUND: Submission ID '{clean_id}' not found in docket {docket_id}")
+
+    @gl.public.view
+    def get_all_submissions(self, docket_id: u256) -> str:
+        """Retrieve all enrolled public comment and study records for a docket."""
+        docket = self._retrieve_docket(int(docket_id))
+        return _encode_json_compact(docket["submissions"])
+
+    @gl.public.view
+    def get_regulatory_clusters(self, docket_id: u256) -> str:
+        """Retrieve all consensus regulatory impact clusters derived for a docket."""
+        docket = self._retrieve_docket(int(docket_id))
+        return _encode_json_compact(docket["clusters"])
+
+    @gl.public.view
+    def get_witness_roll(self, docket_id: u256) -> str:
+        """Retrieve empanelled hearing witnesses in order of selection rank."""
+        docket = self._retrieve_docket(int(docket_id))
+        selected = [s for s in docket["submissions"] if s["selected"]]
+        selected.sort(key=lambda s: s["selection_rank"])
+        return _encode_json_compact(selected)
+
+    @gl.public.view
+    def get_contestation(self, docket_id: u256, challenge_id: u256) -> str:
+        """Retrieve a specific contestation record by challenge ID."""
+        docket = self._retrieve_docket(int(docket_id))
+        cid = int(challenge_id)
+        if cid <= 0 or cid > len(docket["contestations"]):
+            raise gl.vm.UserError(f"ERR_CONTESTATION_NOT_FOUND: Challenge ID {cid} does not exist")
+        return _encode_json_compact(docket["contestations"][cid - 1])
+
+    @gl.public.view
+    def get_all_contestations(self, docket_id: u256) -> str:
+        """Retrieve all contestations lodged for a docket."""
+        docket = self._retrieve_docket(int(docket_id))
+        return _encode_json_compact(docket["contestations"])
+
+    @gl.public.view
+    def get_docket_state(self, docket_id: u256) -> str:
+        """Get the current lifecycle state of a regulatory docket."""
+        docket = self._retrieve_docket(int(docket_id))
+        return docket["state"]
+
+    @gl.public.view
+    def get_manifest_export(self, docket_id: u256) -> str:
+        """Export the canonical manifest text string for a docket."""
+        docket = self._retrieve_docket(int(docket_id))
+        return _build_canonical_manifest_string(docket["submissions"])
