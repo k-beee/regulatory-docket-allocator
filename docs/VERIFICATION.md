@@ -10,7 +10,7 @@
 
 | Artifact | Relative Path | SHA-256 Digest |
 | :--- | :--- | :--- |
-| **Intelligent Contract** | `contracts/regulatory_docket_allocator.py` | `161a074a9dcfa5258c0dfc15b32fecc24897ea28e891d21919b729a99a5ac79a` |
+| **Intelligent Contract** | `contracts/regulatory_docket_allocator.py` | `02ae9d41a156c05271588c561840bcbfc341b64f5f0f1964a0541a75f379651c` |
 | **System Specification** | `docs/SPECIFICATION.md` | Verified at `11432a7` |
 | **Manifest Tooling** | `scripts/docket_manifest.py` | Verified at `2ea5ab9` |
 | **Simulation Doubles** | `tests/conftest.py` | Verified at `2213a0f` |

@@ -254,7 +254,7 @@ Open `http://localhost:5173` in your browser:
 | Component | Hash / Identifier |
 | :--- | :--- |
 | **Contract Source** | `contracts/regulatory_docket_allocator.py` |
-| **Contract SHA-256** | `161a074a9dcfa5258c0dfc15b32fecc24897ea28e891d21919b729a99a5ac79a` |
+| **Contract SHA-256** | `02ae9d41a156c05271588c561840bcbfc341b64f5f0f1964a0541a75f379651c` |
 | **Network** | GenLayer Studionet (Chain ID 61999) |
 | **Standard** | Administrative Procedure Act 5 U.S.C. §§ 553, 706 |
 | **Author** | k bee (`k-beee`) |

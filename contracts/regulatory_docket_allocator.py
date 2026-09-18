@@ -1,22 +1,17 @@
-"""
-Regulatory Docket Allocator — GenLayer Intelligent Contract
-=============================================================
-Orchestrating verifiable Administrative Procedure Act (APA) public comment
-allocation, non-deterministic regulatory impact clustering, and balanced
-oral hearing witness sortition on GenLayer Studionet.
+# { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
+from genlayer import *
 
-Author: k bee (k-beee)
-License: MIT
-"""
+# Regulatory Docket Allocator — GenLayer Intelligent Contract
+# Orchestrating verifiable Administrative Procedure Act (APA) public comment
+# allocation, non-deterministic regulatory impact clustering, and balanced
+# oral hearing witness sortition on GenLayer Studionet.
+# Author: k bee (k-beee)
 
 from datetime import datetime, timezone
 import hashlib
 import json
 import re
 import typing
-
-import genlayer as gl
-from genlayer import TreeMap, u256
 
 
 # ==============================================================================
