@@ -815,3 +815,41 @@ class RegulatoryDocketAllocator(gl.Contract):
             elif s["is_duplicate"]:
                 s["eligible"] = False
                 s["exclusion_reason"] = REASON_UNSELECTED_DUPLICATE_ASTROTURF
+
+    @gl.public.write
+    def cluster_submissions(self, docket_id: u256) -> str:
+        """Run GenVM Dragon consensus to derive substantive regulatory impact clusters."""
+        docket = self._retrieve_docket(int(docket_id))
+        caller = _resolve_transaction_caller()
+
+        if caller != docket["organizer"]:
+            raise gl.vm.UserError(f"ERR_UNAUTHORIZED: Caller {caller} is not docket organizer ({docket['organizer']})")
+        if docket["state"] not in (STATE_MANIFEST_LOCKED, STATE_IMPACT_CONSENSUS):
+            raise gl.vm.UserError(
+                f"ERR_INVALID_LIFECYCLE_STATE: Cannot cluster docket in state {docket['state']}; expected MANIFEST_LOCKED or IMPACT_CONSENSUS"
+            )
+
+        self._derive_regulatory_clusters(docket)
+        docket["state"] = STATE_IMPACT_CONSENSUS
+        self._persist_docket(int(docket_id), docket)
+        return _encode_json_compact(docket["clusters"])
+
+    @gl.public.write
+    def allocate_hearing_witnesses(self, docket_id: u256) -> str:
+        """Empanel hearing witnesses using deterministic balanced impact sortition."""
+        docket = self._retrieve_docket(int(docket_id))
+        caller = _resolve_transaction_caller()
+
+        if caller != docket["organizer"]:
+            raise gl.vm.UserError(f"ERR_UNAUTHORIZED: Caller {caller} is not docket organizer ({docket['organizer']})")
+        if docket["state"] not in (STATE_IMPACT_CONSENSUS, STATE_WITNESSES_ALLOCATED, STATE_CONTESTATION_OPEN):
+            raise gl.vm.UserError(
+                f"ERR_INVALID_LIFECYCLE_STATE: Cannot allocate witnesses in state {docket['state']}; run clustering first"
+            )
+
+        selected = _execute_witness_sortition_algorithm(
+            docket["slot_count"], docket["submissions"], docket["clusters"]
+        )
+        docket["state"] = STATE_WITNESSES_ALLOCATED
+        self._persist_docket(int(docket_id), docket)
+        return _encode_json_compact(selected)
