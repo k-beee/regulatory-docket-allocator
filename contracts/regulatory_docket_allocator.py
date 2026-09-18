@@ -853,3 +853,74 @@ class RegulatoryDocketAllocator(gl.Contract):
         docket["state"] = STATE_WITNESSES_ALLOCATED
         self._persist_docket(int(docket_id), docket)
         return _encode_json_compact(selected)
+
+    @gl.public.write
+    def open_contestation(
+        self,
+        docket_id: u256,
+        challenge_type: str,
+        target_submission_ids_json: str,
+    ) -> u256:
+        """Lodge a formal APA evidentiary challenge against suspicious docket submissions."""
+        docket = self._retrieve_docket(int(docket_id))
+        if docket["state"] not in (STATE_WITNESSES_ALLOCATED, STATE_CONTESTATION_OPEN):
+            raise gl.vm.UserError(
+                f"ERR_INVALID_LIFECYCLE_STATE: Contestation window not active; docket state is {docket['state']}"
+            )
+
+        now = _current_timestamp_utc()
+        if now >= docket["contestation_deadline"]:
+            raise gl.vm.UserError(
+                f"ERR_CONTESTATION_WINDOW_CLOSED: Contestation deadline ({docket['contestation_deadline']}) has passed (now {now})"
+            )
+
+        if challenge_type not in (CHALLENGE_PROVENANCE_MISMATCH, CHALLENGE_DUPLICATE_ASTROTURF):
+            raise gl.vm.UserError(f"ERR_INVALID_CHALLENGE_TYPE: Unknown contestation category '{challenge_type}'")
+
+        try:
+            raw_targets = json.loads(target_submission_ids_json)
+        except Exception:
+            raise gl.vm.UserError("ERR_MALFORMED_TARGETS_JSON: Target submission IDs must be valid JSON array")
+
+        if not isinstance(raw_targets, list) or not raw_targets:
+            raise gl.vm.UserError("ERR_EMPTY_TARGETS: Target submission IDs list cannot be empty")
+
+        clean_targets = [str(t).strip() for t in raw_targets if str(t).strip()]
+        if challenge_type == CHALLENGE_PROVENANCE_MISMATCH:
+            if len(clean_targets) != 1:
+                raise gl.vm.UserError("ERR_TARGET_COUNT: PROVENANCE_MISMATCH requires exactly 1 target submission ID")
+        else:  # DUPLICATE_ASTROTURF
+            if len(clean_targets) != 2:
+                raise gl.vm.UserError("ERR_TARGET_COUNT: DUPLICATE_ASTROTURF requires exactly 2 distinct target submission IDs")
+            if clean_targets[0] == clean_targets[1]:
+                raise gl.vm.UserError("ERR_IDENTICAL_TARGETS: DUPLICATE_ASTROTURF targets must be distinct submissions")
+
+        enrolled_ids = {s["submission_id"] for s in docket["submissions"]}
+        for sid in clean_targets:
+            if sid not in enrolled_ids:
+                raise gl.vm.UserError(f"ERR_TARGET_NOT_ENROLLED: Target submission '{sid}' is not enrolled in this docket")
+
+        # Replay and duplicate dispute defense
+        dedup_key = f"{challenge_type}:{','.join(sorted(clean_targets))}"
+        if dedup_key in docket["contestation_keys"]:
+            raise gl.vm.UserError("ERR_DUPLICATE_CONTESTATION: An identical contestation has already been lodged for these targets")
+
+        caller = _resolve_transaction_caller()
+        ch_id = len(docket["contestations"]) + 1
+
+        contestation = {
+            "id": ch_id,
+            "challenge_type": challenge_type,
+            "target_ids": clean_targets,
+            "challenger": caller,
+            "status": STATUS_PENDING,
+            "resolution_reason": "",
+            "resolved_at_revision": 0,
+        }
+
+        docket["contestations"].append(contestation)
+        docket["contestation_keys"].append(dedup_key)
+        docket["state"] = STATE_CONTESTATION_OPEN
+        self._persist_docket(int(docket_id), docket)
+
+        return u256(ch_id)
