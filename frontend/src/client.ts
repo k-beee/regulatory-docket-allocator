@@ -100,6 +100,14 @@ export class RegulatoryContractClient {
     return typeof res === 'string' ? JSON.parse(res) : res;
   }
 
+  public async getDocketSummary(docketId: number = 1): Promise<DocketSummary> {
+    return this.getDocket(docketId);
+  }
+
+  public async getContestations(docketId: number = 1): Promise<ContestationRecord[]> {
+    return this.getAllContestations(docketId);
+  }
+
   public async getAllContestations(docketId: number = 1): Promise<ContestationRecord[]> {
     if (this.isSimulation || !this.provider) {
       return [...this.simContestations];
@@ -159,7 +167,7 @@ export class RegulatoryContractClient {
     return this.sendWrite('enroll_submission', [docketId, submissionId, url, digest]);
   }
 
-  public async commitAndLockManifest(docketId: number): Promise<string> {
+  public async commitAndLockManifest(docketId: number = 1): Promise<string> {
     if (this.isSimulation || !this.provider) {
       this.simDocket.state = 'MANIFEST_LOCKED';
       return `0xsim_tx_lock_${Date.now()}`;
@@ -167,7 +175,12 @@ export class RegulatoryContractClient {
     return this.sendWrite('commit_and_lock_manifest', [docketId]);
   }
 
-  public async clusterSubmissions(docketId: number): Promise<string> {
+  public async lockManifest(expectedDigest?: string, docketId: number = 1): Promise<{ hash: string }> {
+    const hash = await this.commitAndLockManifest(docketId);
+    return { hash };
+  }
+
+  public async clusterSubmissions(docketId: number = 1): Promise<{ hash: string }> {
     if (this.isSimulation || !this.provider) {
       this.simClusters = [
         {
@@ -205,12 +218,13 @@ export class RegulatoryContractClient {
       }
 
       this.simDocket.state = 'IMPACT_CONSENSUS';
-      return `0xsim_tx_cluster_${Date.now()}`;
+      return { hash: `0xsim_tx_cluster_${Date.now()}` };
     }
-    return this.sendWrite('cluster_submissions', [docketId]);
+    const hash = await this.sendWrite('cluster_submissions', [docketId]);
+    return { hash };
   }
 
-  public async allocateHearingWitnesses(docketId: number): Promise<string> {
+  public async allocateHearingWitnesses(docketId: number = 1): Promise<string> {
     if (this.isSimulation || !this.provider) {
       const s1 = this.simSubmissions.find((s) => s.submission_id === 'sub-industry-coalition');
       const s2 = this.simSubmissions.find((s) => s.submission_id === 'sub-epidemiology-consortium');
@@ -234,11 +248,18 @@ export class RegulatoryContractClient {
     return this.sendWrite('allocate_hearing_witnesses', [docketId]);
   }
 
+  public async allocateWitnesses(docketId: number = 1): Promise<{ hash: string }> {
+    const hash = await this.allocateHearingWitnesses(docketId);
+    return { hash };
+  }
+
   public async openContestation(
-    docketId: number,
     challengeType: ChallengeType,
-    targetIds: string[]
-  ): Promise<string> {
+    targetIds: string[],
+    evidenceUrl?: string,
+    rationale?: string,
+    docketId: number = 1
+  ): Promise<{ hash: string }> {
     if (this.isSimulation || !this.provider) {
       const cid = this.simContestations.length + 1;
       this.simContestations.push({
@@ -251,46 +272,66 @@ export class RegulatoryContractClient {
         resolved_at_revision: 0,
       });
       this.simDocket.state = 'CONTESTATION_OPEN';
-      return `0xsim_tx_challenge_${Date.now()}`;
+      return { hash: `0xsim_tx_challenge_${Date.now()}` };
     }
-    return this.sendWrite('open_contestation', [docketId, challengeType, JSON.stringify(targetIds)]);
+    const hash = await this.sendWrite('open_contestation', [docketId, challengeType, JSON.stringify(targetIds)]);
+    return { hash };
   }
 
-  public async resolveContestation(docketId: number, challengeId: number): Promise<string> {
+  public async resolveContestation(
+    challengeId: number,
+    outcome: string = 'ACCEPT',
+    reason: string = '',
+    docketId: number = 1
+  ): Promise<{ hash: string }> {
     if (this.isSimulation || !this.provider) {
       const c = this.simContestations.find((item) => item.id === challengeId);
       if (c) {
-        c.status = 'ACCEPTED';
-        c.resolution_reason = 'Provenance hash drift confirmed: live brief text deviated from committed SHA-256 hash';
+        c.status = outcome === 'ACCEPT' ? 'ACCEPTED' : 'REJECTED';
+        c.resolution_reason = reason || 'Arbitration finding recorded';
         c.resolved_at_revision = this.simDocket.revision + 1;
         this.simDocket.revision += 1;
 
-        const target = this.simSubmissions.find((s) => s.submission_id === c.target_ids[0]);
-        if (target) {
-          target.eligible = false;
-          target.selected = false;
-          target.exclusion_reason = 'PROVENANCE_DISQUALIFIED';
-        }
+        if (outcome === 'ACCEPT' && c.target_ids.length > 0) {
+          const target = this.simSubmissions.find((s) => s.submission_id === c.target_ids[0]);
+          if (target) {
+            target.eligible = false;
+            target.selected = false;
+            target.exclusion_reason = 'PROVENANCE_DISQUALIFIED';
+          }
 
-        const replacement = this.simSubmissions.find((s) => s.submission_id === 'sub-small-biz-alliance');
-        if (replacement) {
-          replacement.selected = true;
-          replacement.selection_rank = 1;
-          replacement.reason_code = 'PRIMARY_IMPACT_WITNESS';
-          replacement.rationale = 'Re-allocated lead witness for Impact Vector #1 following disqualification';
+          const replacement = this.simSubmissions.find((s) => s.submission_id === 'sub-small-biz-alliance');
+          if (replacement) {
+            replacement.selected = true;
+            replacement.selection_rank = 1;
+            replacement.reason_code = 'PRIMARY_IMPACT_WITNESS';
+            replacement.rationale = 'Re-allocated lead witness for Impact Vector #1 following disqualification';
+          }
         }
       }
-      return `0xsim_tx_resolve_${Date.now()}`;
+      return { hash: `0xsim_tx_resolve_${Date.now()}` };
     }
-    return this.sendWrite('resolve_contestation', [docketId, challengeId]);
+    const hash = await this.sendWrite('resolve_contestation', [docketId, challengeId]);
+    return { hash };
   }
 
-  public async ratifyDocket(docketId: number): Promise<string> {
+  public async ratifyDocket(docketId: number = 1): Promise<{ hash: string }> {
     if (this.isSimulation || !this.provider) {
       this.simDocket.state = 'SOVEREIGN_RATIFIED';
-      return `0xsim_tx_ratify_${Date.now()}`;
+      return { hash: `0xsim_tx_ratify_${Date.now()}` };
     }
-    return this.sendWrite('ratify_docket', [docketId]);
+    const hash = await this.sendWrite('ratify_docket', [docketId]);
+    return { hash };
+  }
+
+  public async annulDocket(reason: string, docketId: number = 1): Promise<{ hash: string }> {
+    if (this.isSimulation || !this.provider) {
+      this.simDocket.state = 'ANNULLED_PRELOCK';
+      this.simDocket.annulment_reason = reason;
+      return { hash: `0xsim_tx_annul_${Date.now()}` };
+    }
+    const hash = await this.sendWrite('annul_docket', [docketId, reason]);
+    return { hash };
   }
 
   private async callView(method: string, args: any[]): Promise<any> {
@@ -330,3 +371,5 @@ export class RegulatoryContractClient {
     });
   }
 }
+
+export { RegulatoryContractClient as GenLayerContractClient };
