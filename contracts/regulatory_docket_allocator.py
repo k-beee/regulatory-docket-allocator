@@ -158,3 +158,111 @@ def _compute_manifest_hash(submissions: list) -> str:
 def _encode_json_compact(data: typing.Any) -> str:
     """Deterministic JSON serialization with sorted keys."""
     return json.dumps(data, separators=(",", ":"), sort_keys=True)
+
+
+# ==============================================================================
+# 3. Deterministic Balanced Witness Sortition Engine
+# ==============================================================================
+
+def _witness_tiebreak_key(sub: dict) -> tuple:
+    """Deterministic tie-breaker: descending relevance score, ascending digest, ascending index."""
+    relevance = int(sub.get("relevance_score", 0))
+    digest = str(sub.get("digest", "")).lower()
+    index = int(sub.get("index", 0))
+    return (-relevance, digest, index)
+
+
+def _execute_witness_sortition_algorithm(slot_count: int, submissions: list, clusters: list) -> list:
+    """Execute two-pass balanced witness sortition ensuring full impact domain coverage."""
+    # Reset selection state
+    for s in submissions:
+        s["selected"] = False
+        s["selection_rank"] = 0
+        s["reason_code"] = ""
+        s["rationale"] = ""
+
+    # Filter eligible pool
+    eligible_pool = [
+        s for s in submissions
+        if s.get("eligible", True)
+        and int(s.get("cluster_id", 0)) > 0
+        and not s.get("is_duplicate", False)
+        and not s.get("is_irrelevant", False)
+    ]
+
+    cluster_delegate_tally = {int(c["cluster_id"]): 0 for c in clusters}
+    selected_witnesses = []
+
+    # Pass 1: Perspective Coverage Pass (Top witness per impact cluster)
+    for c in clusters:
+        cid = int(c["cluster_id"])
+        c_candidates = [s for s in eligible_pool if int(s["cluster_id"]) == cid]
+        if not c_candidates:
+            continue
+
+        c_candidates.sort(key=_witness_tiebreak_key)
+        top_witness = c_candidates[0]
+        top_witness["selected"] = True
+        top_witness["reason_code"] = REASON_PRIMARY_IMPACT_WITNESS
+        top_witness["rationale"] = f"Empanelled as lead oral hearing witness for Impact Vector #{cid}: {c.get('label', '')}"
+        selected_witnesses.append(top_witness)
+        cluster_delegate_tally[cid] = 1
+
+        if len(selected_witnesses) >= slot_count:
+            break
+
+    # Pass 2: Proportional Depth Pass (Fill remaining seats globally)
+    if len(selected_witnesses) < slot_count:
+        remaining_candidates = [s for s in eligible_pool if not s["selected"]]
+        remaining_candidates.sort(key=_witness_tiebreak_key)
+
+        for candidate in remaining_candidates:
+            cid = int(candidate["cluster_id"])
+            if cluster_delegate_tally.get(cid, 0) >= MAX_WITNESSES_PER_IMPACT_CLUSTER:
+                continue
+
+            candidate["selected"] = True
+            candidate["reason_code"] = REASON_SECONDARY_IMPACT_DEPTH
+            candidate["rationale"] = f"Empanelled as depth hearing witness for Impact Vector #{cid} (Relevance {candidate['relevance_score']})"
+            selected_witnesses.append(candidate)
+            cluster_delegate_tally[cid] = cluster_delegate_tally.get(cid, 0) + 1
+
+            if len(selected_witnesses) >= slot_count:
+                break
+
+    # Assign final rank order
+    selected_witnesses.sort(key=lambda s: (-int(s.get("relevance_score", 0)), str(s.get("digest", "")), int(s.get("index", 0))))
+    for rank, w in enumerate(selected_witnesses, start=1):
+        w["selection_rank"] = rank
+
+    # Tag unselected submissions with explanatory reasons
+    for s in submissions:
+        if s["selected"]:
+            continue
+        if not s.get("eligible", True):
+            if s.get("exclusion_reason") == REASON_UNSELECTED_PROVENANCE_DISQUALIFIED:
+                s["reason_code"] = REASON_UNSELECTED_PROVENANCE_DISQUALIFIED
+                s["rationale"] = "Disqualified: Web content altered after manifest freeze (cryptographic hash mismatch)"
+            elif s.get("exclusion_reason") == REASON_UNSELECTED_DUPLICATE_ASTROTURF:
+                s["reason_code"] = REASON_UNSELECTED_DUPLICATE_ASTROTURF
+                s["rationale"] = f"Disqualified: Confirmed duplicate form-letter astroturfing of {s.get('duplicate_of_id', '')}"
+            else:
+                s["reason_code"] = REASON_UNSELECTED_OUT_OF_SCOPE
+                s["rationale"] = "Evaluated as out of scope or irrelevant to published NPRM charter"
+        elif int(s.get("cluster_id", 0)) == 0:
+            s["reason_code"] = REASON_UNSELECTED_OUT_OF_SCOPE
+            s["rationale"] = "Evaluated as out of scope or irrelevant to published NPRM charter"
+        elif s.get("is_duplicate", False):
+            s["reason_code"] = REASON_UNSELECTED_DUPLICATE_ASTROTURF
+            s["rationale"] = f"Identified as near-duplicate astroturfed submission of {s.get('duplicate_of_id', '')}"
+        elif cluster_delegate_tally.get(int(s.get("cluster_id", 0)), 0) >= MAX_WITNESSES_PER_IMPACT_CLUSTER:
+            s["reason_code"] = REASON_UNSELECTED_IMPACT_CAP
+            s["rationale"] = f"Impact Vector {s['cluster_id']} reached maximum capacity cap of {MAX_WITNESSES_PER_IMPACT_CLUSTER} witnesses"
+        elif len(selected_witnesses) >= slot_count:
+            s["reason_code"] = REASON_UNSELECTED_SLOT_CAPACITY
+            s["rationale"] = "Unselected: Hearing witness schedule capacity filled with higher-ranked candidates"
+        else:
+            s["reason_code"] = REASON_UNSELECTED_LOWER_RELEVANCE
+            s["rationale"] = "Unselected: Lower substantive relevance score or tie-break ranking"
+
+    return selected_witnesses
