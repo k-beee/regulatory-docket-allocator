@@ -1,0 +1,13 @@
+[project]
+name = "regulatory-docket-allocator"
+version = "1.0.0"
+description = "GenLayer Intelligent Contract orchestrating verifiable administrative rulemaking sortition, APA compliance, and balanced witness empanelling."
+authors = [{ name = "k bee", email = "296437372+k-beee@users.noreply.github.com" }]
+license = { text = "MIT" }
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = []
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
