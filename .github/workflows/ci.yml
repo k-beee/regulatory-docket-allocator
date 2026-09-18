@@ -1,0 +1,36 @@
+name: Regulatory Docket Allocator CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-contract:
+    name: Contract Verification & GenVM Runtime Smoke
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Run Manifest Tooling Unit Tests
+        run: |
+          python -m unittest tests/test_docket_manifest.py
+
+      - name: Run Intelligent Contract Unit Test Suite
+        run: |
+          python -m unittest tests/test_regulatory_docket_allocator.py
+
+      - name: Execute Direct GenVM Runtime Consensus Smoke Test
+        run: |
+          python tests/runtime_smoke.py
