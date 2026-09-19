@@ -3,14 +3,14 @@
  *
  * 1. Generates authentic random wallets.
  * 2. Funds them with GEN from the master funded key.
- * 3. Populates Regulatory Docket Allocator (0xC2E3b411A4b5BD691A42285A47111BD91d541962).
+ * 3. Populates Regulatory Docket Allocator (0xD9403971A4CE287EAc3891065f79CF8Dd9f72048).
  * 4. Populates Civic Deliberation Allocator (0x8c0747c835Dc8692878EaCA5Dd652a5216D60AA0).
  */
 
 import { createClient, createAccount, generatePrivateKey, chains } from '../frontend/node_modules/genlayer-js/dist/index.js';
 
 const MASTER_KEY = '0x865c6773bcd46f894a56092ca318c2d4931d49ed8e60ddc4c8a709b67683e699';
-const REGULATORY_CONTRACT = '0xC2E3b411A4b5BD691A42285A47111BD91d541962';
+const REGULATORY_CONTRACT = '0xD9403971A4CE287EAc3891065f79CF8Dd9f72048';
 const CIVIC_CONTRACT = '0x8c0747c835Dc8692878EaCA5Dd652a5216D60AA0';
 
 async function main() {

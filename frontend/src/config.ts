@@ -12,7 +12,7 @@ export const NETWORK_CONFIG = {
 };
 
 // Default deployed contract address (live on Studionet)
-export const DEFAULT_CONTRACT_ADDRESS = '0xC2E3b411A4b5BD691A42285A47111BD91d541962';
+export const DEFAULT_CONTRACT_ADDRESS = '0xD9403971A4CE287EAc3891065f79CF8Dd9f72048';
 
 // Allowed EIP-6963 Wallet RDNS identifiers
 export const ALLOWED_WALLET_RDNS = [

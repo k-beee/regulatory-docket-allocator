@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Regulatory Docket Allocator - Live Studionet Docket Population Script
- * Contract: 0xC2E3b411A4b5BD691A42285A47111BD91d541962
+ * Contract: 0xD9403971A4CE287EAc3891065f79CF8Dd9f72048
  * Chain: GenLayer Studionet (61999)
  *
  * Usage:
@@ -12,7 +12,7 @@
 
 import { createClient, createAccount, generatePrivateKey, chains } from 'genlayer-js';
 
-const CONTRACT_ADDRESS = '0xC2E3b411A4b5BD691A42285A47111BD91d541962';
+const CONTRACT_ADDRESS = '0xD9403971A4CE287EAc3891065f79CF8Dd9f72048';
 const privateKey = process.argv[2] || process.env.GENLAYER_PRIVATE_KEY;
 
 if (!privateKey) {

@@ -3,8 +3,8 @@
 **Target Environment:** GenLayer Studionet (Chain ID 61999)  
 **Security Standard:** GenVM Dragon Consensus Specification v1.0 / APA § 553 Procedural Standard  
 **Author:** k bee (`k-beee`)  
-**Deployed Contract:** [`0xC2E3b411A4b5BD691A42285A47111BD91d541962`](https://explorer-studio.genlayer.com/address/0xC2E3b411A4b5BD691A42285A47111BD91d541962)  
-**Studionet Explorer:** [https://explorer-studio.genlayer.com/address/0xC2E3b411A4b5BD691A42285A47111BD91d541962](https://explorer-studio.genlayer.com/address/0xC2E3b411A4b5BD691A42285A47111BD91d541962)  
+**Deployed Contract:** [`0xD9403971A4CE287EAc3891065f79CF8Dd9f72048`](https://explorer-studio.genlayer.com/address/0xD9403971A4CE287EAc3891065f79CF8Dd9f72048)  
+**Studionet Explorer:** [https://explorer-studio.genlayer.com/address/0xD9403971A4CE287EAc3891065f79CF8Dd9f72048](https://explorer-studio.genlayer.com/address/0xD9403971A4CE287EAc3891065f79CF8Dd9f72048)  
 
 ---
 
