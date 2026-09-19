@@ -96,9 +96,9 @@ export const App: React.FC = () => {
       setIsLoading(true);
       addLog('initialize_docket', 'PENDING', undefined, 'Submitting initialize_docket transaction to Studionet...');
       const tx = await client!.initializeDocket(
-        'https://federalregister.gov/dockets/EPA-HQ-OAR-2026-0188',
-        '4a6b2c89f1092e038827419efcd51804c81e9b28a7e02518e3290bca7140f9aa',
-        '3bf1e0dc12003c267232230a103cfd39c09c323f99066601ea319a2786a51d8b',
+        'https://raw.githubusercontent.com/k-beee/regulatory-docket-allocator/main/frontend/public/fixtures/nprm-epa-2026.txt',
+        'af6d1c26d932fd08c75c0ba79e16105605a64c06f73e9790b2e9466b591d5e9a',
+        '23a385cf2c5e85b48af0b3a49c501ec4f03cfb7aa63510a425636cd3222f58e8',
         3,
         Math.floor(Date.now() / 1000) + 86400,
         Math.floor(Date.now() / 1000) + 172800
@@ -162,11 +162,11 @@ export const App: React.FC = () => {
     }
   };
 
-  const handleOpenContestation = async (type: ChallengeType, targetIds: string[], evidenceUrl: string, rat: string) => {
+  const handleOpenContestation = async (type: ChallengeType, targetIds: string[]) => {
     if (!client) return;
     addLog('open_contestation', 'PENDING', undefined, `Filing ${type} challenge against ${targetIds.join(', ')}`);
     try {
-      const tx = await client.openContestation(type, targetIds, evidenceUrl, rat);
+      const tx = await client.openContestation(type, targetIds);
       addLog('open_contestation', 'SUCCESS', tx.hash, 'On-chain challenge registered.');
       await refreshDocket();
     } catch (err: any) {
@@ -175,26 +175,26 @@ export const App: React.FC = () => {
     }
   };
 
-  const handleResolveContestation = async (id: number, outcome: string, reason: string) => {
+  const handleResolveContestation = async (contestationId: number, outcome: string, reason: string) => {
     if (!client) return;
-    addLog('resolve_contestation', 'PENDING', undefined, `Arbitrating dispute #${id} with GenLayer consensus`);
     try {
-      const tx = await client.resolveContestation(id, outcome, reason);
-      addLog('resolve_contestation', 'SUCCESS', tx.hash, `Dispute #${id} resolved on-chain.`);
+      addLog('resolve_contestation', 'PENDING', undefined, `Resolving Contestation #${contestationId}`);
+      const tx = await client.resolveContestation(contestationId, outcome, reason);
+      addLog('resolve_contestation', 'SUCCESS', tx.hash, `Contestation #${contestationId} resolved.`);
       await refreshDocket();
     } catch (err: any) {
       addLog('resolve_contestation', 'ERROR', undefined, err.message);
-      alert(`Arbitration failed: ${err.message}`);
+      alert(`Resolution failed: ${err.message}`);
     }
   };
 
   const handleRatifyDocket = async () => {
-    if (!docket || !client) return;
+    if (!client) return;
     try {
       setIsLoading(true);
-      addLog('ratify_docket', 'PENDING', undefined, 'Publishing sovereign ratification to Federal Register');
+      addLog('ratify_docket', 'PENDING', undefined, 'Submitting final docket sovereign ratification');
       const tx = await client.ratifyDocket();
-      addLog('ratify_docket', 'SUCCESS', tx.hash, 'Docket ratified on GenLayer blockchain.');
+      addLog('ratify_docket', 'SUCCESS', tx.hash, 'Docket sovereignly ratified and sealed.');
       await refreshDocket();
     } catch (err: any) {
       addLog('ratify_docket', 'ERROR', undefined, err.message);
@@ -205,13 +205,12 @@ export const App: React.FC = () => {
   };
 
   const handleAnnulDocket = async () => {
-    if (!client) return;
-    const reason = prompt('Specify administrative justification for pre-lock docket annulment:');
-    if (!reason) return;
+    if (!client || !docket) return;
+    if (!confirm('Are you sure you want to administratively annul this docket prior to manifest lock? This action cannot be undone.')) return;
     try {
       setIsLoading(true);
       addLog('annul_docket_prelock', 'PENDING', undefined, 'Pre-lock docket annulment initiated');
-      const tx = await client.annulDocket(reason);
+      const tx = await client.annulDocket(docket.docket_id);
       addLog('annul_docket_prelock', 'SUCCESS', tx.hash, 'Docket annulled on-chain.');
       await refreshDocket();
     } catch (err: any) {

@@ -7,7 +7,7 @@ interface ContestationDrawerProps {
   onClose: () => void;
   contestations: ContestationRecord[];
   submissions: SubmissionRecord[];
-  onOpenContestation: (challengeType: ChallengeType, targetIds: string[], evidenceUrl: string, rationale: string) => Promise<void>;
+  onOpenContestation: (challengeType: ChallengeType, targetIds: string[]) => Promise<void>;
   onResolveContestation: (contestationId: number, outcome: string, reason: string) => Promise<void>;
   preselectedSubmission?: SubmissionRecord | null;
   isLoading: boolean;
@@ -25,8 +25,6 @@ export const ContestationDrawer: React.FC<ContestationDrawerProps> = ({
 }) => {
   const [challengeType, setChallengeType] = useState<ChallengeType>('DUPLICATE_ASTROTURF');
   const [targetId, setTargetId] = useState<string>(preselectedSubmission ? preselectedSubmission.submission_id : '');
-  const [evidenceUrl, setEvidenceUrl] = useState<string>('https://regulatory-audit.gov/evidence/sample-duplicate.txt');
-  const [rationale, setRationale] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Update targetId if preselected changes
@@ -44,16 +42,11 @@ export const ContestationDrawer: React.FC<ContestationDrawerProps> = ({
       alert('Please specify a target submission ID to contest.');
       return;
     }
-    if (!rationale.trim()) {
-      alert('Please provide a substantive APA rationale for the dispute.');
-      return;
-    }
 
     try {
       setIsSubmitting(true);
       const targets = targetId.split(',').map(s => s.trim()).filter(Boolean);
-      await onOpenContestation(challengeType, targets, evidenceUrl, rationale);
-      setRationale('');
+      await onOpenContestation(challengeType, targets);
       alert('Contestation registered on-chain in the docket registry.');
     } catch (err: any) {
       alert(`Contestation submission failed: ${err.message}`);
@@ -188,39 +181,15 @@ export const ContestationDrawer: React.FC<ContestationDrawerProps> = ({
             </label>
             <input
               type="text"
-              placeholder="e.g. EPA-SUB-005"
+              placeholder="e.g. EPA-SUB-005 (or EPA-SUB-003, EPA-SUB-005 for duplicates)"
               value={targetId}
               onChange={(e) => setTargetId(e.target.value)}
               className="reg-input"
               style={{ width: '100%', fontSize: '0.8rem' }}
             />
-          </div>
-
-          <div>
-            <label className="reg-label" style={{ display: 'block', marginBottom: '0.3rem' }}>
-              Corroborating Evidence URL / Docket Citation
-            </label>
-            <input
-              type="text"
-              value={evidenceUrl}
-              onChange={(e) => setEvidenceUrl(e.target.value)}
-              className="reg-input"
-              style={{ width: '100%', fontSize: '0.8rem' }}
-            />
-          </div>
-
-          <div>
-            <label className="reg-label" style={{ display: 'block', marginBottom: '0.3rem' }}>
-              Substantive Rationale & Citations
-            </label>
-            <textarea
-              rows={3}
-              placeholder="Explain how the challenged filing fails APA substantive requirements or replicates existing comments verbatim..."
-              value={rationale}
-              onChange={(e) => setRationale(e.target.value)}
-              className="reg-input"
-              style={{ width: '100%', fontSize: '0.8rem', resize: 'vertical' }}
-            />
+            <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', marginTop: '0.25rem', display: 'block' }}>
+              Specify 1 submission ID for Provenance Mismatch, or 2 comma-separated IDs for Duplicate Astroturf.
+            </span>
           </div>
 
           <button

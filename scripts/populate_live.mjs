@@ -64,9 +64,9 @@ async function main() {
       address: CONTRACT_ADDRESS,
       functionName: 'initialize_docket',
       args: [
-        'https://federalregister.gov/dockets/EPA-HQ-OAR-2026-0188',
-        '4a6b2c89f1092e038827419efcd51804c81e9b28a7e02518e3290bca7140f9aa',
-        '3bf1e0dc12003c267232230a103cfd39c09c323f99066601ea319a2786a51d8b',
+        'https://raw.githubusercontent.com/k-beee/regulatory-docket-allocator/main/frontend/public/fixtures/nprm-epa-2026.txt',
+        'af6d1c26d932fd08c75c0ba79e16105605a64c06f73e9790b2e9466b591d5e9a',
+        '23a385cf2c5e85b48af0b3a49c501ec4f03cfb7aa63510a425636cd3222f58e8',
         3, // 3 oral witness slots
         now + 86400,
         now + 172800,
@@ -92,28 +92,28 @@ async function main() {
     const candidates = [
       {
         id: 'EPA-SUB-001',
-        url: 'https://federalregister.gov/comments/EPA-HQ-OAR-2026-0188/001-fleet-economics.txt',
-        digest: '1111111111111111111111111111111111111111111111111111111111111111',
+        url: 'https://raw.githubusercontent.com/k-beee/regulatory-docket-allocator/main/frontend/public/fixtures/sub1-industry.txt',
+        digest: 'a0e8fd652015c05be982defa160a2fdeac85a2197dbed36144a9b45e21acabab',
       },
       {
         id: 'EPA-SUB-002',
-        url: 'https://federalregister.gov/comments/EPA-HQ-OAR-2026-0188/002-pediatric-epidemiology.txt',
-        digest: '2222222222222222222222222222222222222222222222222222222222222222',
+        url: 'https://raw.githubusercontent.com/k-beee/regulatory-docket-allocator/main/frontend/public/fixtures/sub2-epidemiology.txt',
+        digest: 'e916f0efdf0b52c0107197daf9839953211b398bac86fc33deee06701ce12c4a',
       },
       {
         id: 'EPA-SUB-003',
-        url: 'https://federalregister.gov/comments/EPA-HQ-OAR-2026-0188/003-small-biz-freight.txt',
-        digest: '3333333333333333333333333333333333333333333333333333333333333333',
+        url: 'https://raw.githubusercontent.com/k-beee/regulatory-docket-allocator/main/frontend/public/fixtures/sub3-small-biz.txt',
+        digest: 'e2026a7df83c0056fe482bf95e60b57fb90444b58c1e5a10dc713a232d72d974',
       },
       {
         id: 'EPA-SUB-004',
-        url: 'https://federalregister.gov/comments/EPA-HQ-OAR-2026-0188/004-clean-hydrogen-powertrain.txt',
-        digest: '4444444444444444444444444444444444444444444444444444444444444444',
+        url: 'https://raw.githubusercontent.com/k-beee/regulatory-docket-allocator/main/frontend/public/fixtures/sub4-clean-tech.txt',
+        digest: 'cdf7ac8836d3d728e084cfb3fb56a52c420411de3cf8d72eafa170be4f98e16c',
       },
       {
         id: 'EPA-SUB-005',
-        url: 'https://federalregister.gov/comments/EPA-HQ-OAR-2026-0188/005-tampered-sample.txt',
-        digest: '5555555555555555555555555555555555555555555555555555555555555555',
+        url: 'https://raw.githubusercontent.com/k-beee/regulatory-docket-allocator/main/frontend/public/fixtures/sub5-tampered-sample.txt',
+        digest: '03043ced0923843fb2d29f53ba2e91b4d57d6e9cd0ebf33264759389aeb95753',
       },
     ];
 

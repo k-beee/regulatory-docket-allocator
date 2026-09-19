@@ -46,7 +46,7 @@ A regulatory docket traverses seven discrete, monotonic states:
       │  Coverage-first guarantee ensures every impact domain is voiced.
       ▼
 [4. CONTESTATION_OPEN] 
-      │  Active window for bonded administrative evidence challenges.
+      │  Active window for evidentiary administrative challenges.
       │  (PROVENANCE_MISMATCH or DUPLICATE_ASTROTURF)
       ▼
 [5. SOVEREIGN_RATIFIED] 

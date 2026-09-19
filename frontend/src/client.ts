@@ -178,8 +178,6 @@ export class RegulatoryContractClient {
   public async openContestation(
     challengeType: ChallengeType,
     targetIds: string[],
-    evidenceUrl?: string,
-    rationale?: string,
     docketId: number = 1
   ): Promise<{ hash: string }> {
     const hash = await this.writeMethod('open_contestation', [docketId, challengeType, JSON.stringify(targetIds)]);
@@ -201,8 +199,8 @@ export class RegulatoryContractClient {
     return { hash };
   }
 
-  public async annulDocket(reason: string, docketId: number = 1): Promise<{ hash: string }> {
-    const hash = await this.writeMethod('annul_docket', [docketId, reason]);
+  public async annulDocket(docketId: number = 1): Promise<{ hash: string }> {
+    const hash = await this.writeMethod('annul_docket', [docketId]);
     return { hash };
   }
 
